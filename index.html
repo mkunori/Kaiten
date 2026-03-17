@@ -30,6 +30,7 @@
             <section id="stage-area">
                 <p id="unlock-message">10回で「色変更」が解放されます。</p>
                 <div id="kanji-stage">
+                    <div id="effect-layer" aria-hidden="true"></div>
                     <div id="kanji">回</div>
                 </div>
             </section>
@@ -44,9 +45,9 @@
                 </div>
 
                 <div class="panel-head unlock-head">
-                    <h2>解放リスト</h2>
+                    <h2>実績バッジ</h2>
                 </div>
-                <div id="unlock-list" aria-label="解放機能一覧"></div>
+                <div id="badge-list" aria-label="実績バッジ一覧"></div>
             </section>
         </main>
 
@@ -58,6 +59,10 @@
     </div>
 
     <div id="unlock-toast" role="status" aria-live="polite" hidden></div>
+    <div id="level-up-overlay" aria-hidden="true" hidden>
+        <span class="level-up-title">LEVEL UP!</span>
+        <span id="level-up-value">Lv.1</span>
+    </div>
     <script src="script.js"></script>
 </body>
 

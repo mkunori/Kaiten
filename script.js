@@ -1,16 +1,19 @@
 const kanji = document.getElementById("kanji");
 const kanjiStage = document.getElementById("kanji-stage");
+const effectLayer = document.getElementById("effect-layer");
 const counterValue = document.getElementById("counter-value");
 const levelValue = document.getElementById("level-value");
 const progressText = document.getElementById("progress-text");
 const progressFill = document.getElementById("progress-fill");
-const unlockList = document.getElementById("unlock-list");
+const badgeList = document.getElementById("badge-list");
 const unlockMessage = document.getElementById("unlock-message");
 const nextUnlock = document.getElementById("next-unlock");
 const spinButton = document.getElementById("spin-button");
 const autoRotateButton = document.getElementById("auto-rotate-button");
 const resetButton = document.getElementById("reset-button");
 const unlockToast = document.getElementById("unlock-toast");
+const levelUpOverlay = document.getElementById("level-up-overlay");
+const levelUpValue = document.getElementById("level-up-value");
 
 const unlockSteps = [
     { count: 10, name: "色変更" },
@@ -18,23 +21,43 @@ const unlockSteps = [
     { count: 50, name: "エフェクト" }
 ];
 
+const badgeSteps = [
+    { id: "first-spin", name: "初回転", detail: "1回回す", type: "rotation", count: 1 },
+    { id: "spin-10", name: "10回転達成", detail: "10回回す", type: "rotation", count: 10 },
+    { id: "spin-50", name: "50回転達成", detail: "50回回す", type: "rotation", count: 50 },
+    { id: "spin-100", name: "100回転達成", detail: "100回回す", type: "rotation", count: 100 },
+    { id: "unlock-auto", name: "自動回転解放", detail: "自動回転機能を解放する", type: "unlock", count: 30 },
+    { id: "level-3", name: "レベルアップ初心者", detail: "レベル3に到達する", type: "level", count: 3 }
+];
+
 const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
+const levelThresholds = [10, 30, 50, 100];
 
 // 回転数や自動回転の状態を覚えるための変数です。
 let angle = 0;
 let rotationCount = 0;
 let autoRotateIntervalId = null;
 let toastTimeoutId = null;
+let levelUpTimeoutId = null;
+let particleSeed = 0;
+let unlockedBadgeIds = [];
 
 // その回数の機能が解放済みかを確認します。
 function isUnlocked(stepCount) {
     return rotationCount >= stepCount;
 }
 
-// 現在のレベルは、解放済み機能の数に合わせて決めます。
+// レベルは回転回数のしきい値に応じて上がります。
 function getLevel() {
-    const unlockedCount = unlockSteps.filter((step) => isUnlocked(step.count)).length;
-    return unlockedCount + 1;
+    let level = 1;
+
+    levelThresholds.forEach((threshold) => {
+        if (rotationCount >= threshold) {
+            level += 1;
+        }
+    });
+
+    return level;
 }
 
 // 次に解放される機能を探します。
@@ -83,17 +106,26 @@ function updateStatusBar() {
     nextUnlock.textContent = nextStep ? `あと${nextStep.count - rotationCount}回` : "解放済み";
 }
 
-// 解放一覧を並べて表示します。未解放は？？？にします。
-function updateUnlockList() {
-    unlockList.innerHTML = "";
+// 実績バッジ一覧を表示します。未獲得のものはロック表示にします。
+function updateBadgeList() {
+    badgeList.innerHTML = "";
 
-    unlockSteps.forEach((step) => {
+    badgeSteps.forEach((badge) => {
         const item = document.createElement("div");
-        const unlocked = isUnlocked(step.count);
+        const badgeName = document.createElement("span");
+        const badgeDetail = document.createElement("span");
+        const unlocked = unlockedBadgeIds.includes(badge.id);
 
-        item.className = unlocked ? "unlock-item unlocked" : "unlock-item locked";
-        item.textContent = unlocked ? step.name : "？？？";
-        unlockList.appendChild(item);
+        item.className = unlocked ? "badge-item unlocked" : "badge-item locked";
+        badgeName.className = "badge-name";
+        badgeDetail.className = "badge-detail";
+
+        badgeName.textContent = unlocked ? badge.name : "？？？";
+        badgeDetail.textContent = unlocked ? badge.detail : "ロック中";
+
+        item.appendChild(badgeName);
+        item.appendChild(badgeDetail);
+        badgeList.appendChild(item);
     });
 }
 
@@ -161,8 +193,9 @@ function updateUnlockMessage() {
     unlockMessage.textContent = "すべての機能が解放されました。";
 }
 
-// 解放通知を画面上に一時表示します。
-function showUnlockToast(message) {
+// 通知を画面上に一時表示します。
+function showToast(message, variant = "") {
+    unlockToast.className = variant;
     unlockToast.textContent = message;
     unlockToast.hidden = false;
 
@@ -175,17 +208,88 @@ function showUnlockToast(message) {
     }, 2200);
 }
 
-// 回したときに、軽く弾むアニメーションを付けます。
-function playClickAnimation() {
+// バッジ獲得時は通知の色を少し変えます。
+function showBadgeToast(message) {
+    showToast(message, "badge-toast");
+}
+
+// レベルアップ時は中央付近に大きく表示します。
+function showLevelUpOverlay(level) {
+    levelUpValue.textContent = `Lv.${level}`;
+    levelUpOverlay.hidden = false;
+    levelUpOverlay.classList.remove("show");
+    void levelUpOverlay.offsetWidth;
+    levelUpOverlay.classList.add("show");
+
+    if (levelUpTimeoutId !== null) {
+        window.clearTimeout(levelUpTimeoutId);
+    }
+
+    levelUpTimeoutId = window.setTimeout(() => {
+        levelUpOverlay.hidden = true;
+    }, 1300);
+}
+
+// エフェクト用のリングを追加します。
+function createRingEffect(isSpecial) {
+    const ring = document.createElement("span");
+
+    ring.className = isSpecial ? "ring-effect special" : "ring-effect";
+    ring.addEventListener("animationend", () => {
+        ring.remove();
+    });
+    effectLayer.appendChild(ring);
+}
+
+// エフェクト用のパーティクルを追加します。
+function createParticleEffect(isSpecial) {
+    const particle = document.createElement("span");
+    const angleDegree = (particleSeed * 47) % 360;
+    const distance = isSpecial ? 78 + (particleSeed % 28) : 52 + (particleSeed % 20);
+    const moveX = Math.cos((angleDegree * Math.PI) / 180) * distance;
+    const moveY = Math.sin((angleDegree * Math.PI) / 180) * distance;
+
+    particleSeed += 1;
+    particle.className = isSpecial ? "particle special" : "particle";
+    particle.style.setProperty("--move-x", `${moveX.toFixed(1)}px`);
+    particle.style.setProperty("--move-y", `${moveY.toFixed(1)}px`);
+    particle.addEventListener("animationend", () => {
+        particle.remove();
+    });
+    effectLayer.appendChild(particle);
+}
+
+// 回したときに、弾みと光りを付けます。
+function playClickAnimation(isSpecial = false) {
     kanjiStage.classList.remove("bump");
+    kanjiStage.classList.remove("flash");
+    kanji.classList.remove("pop");
     void kanjiStage.offsetWidth;
     kanjiStage.classList.add("bump");
+    kanjiStage.classList.add("flash");
+    kanji.classList.add("pop");
+
+    createRingEffect(isSpecial);
+
+    const particleCount = isSpecial ? 14 : 8;
+    for (let index = 0; index < particleCount; index += 1) {
+        createParticleEffect(isSpecial);
+    }
+}
+
+// 解放や実績獲得時は、通常より少し豪華な演出を追加します。
+function playRewardEffect() {
+    createRingEffect(true);
+
+    for (let index = 0; index < 12; index += 1) {
+        createParticleEffect(true);
+    }
 }
 
 // 画面全体の表示をまとめて更新します。
 function updateGameScreen() {
     updateStatusBar();
-    updateUnlockList();
+    updateBadgeList();
     updateProgressGauge();
     updateKanjiColor();
     updateKanjiEffect();
@@ -203,29 +307,80 @@ function stopAutoRotate() {
     autoRotateIntervalId = null;
 }
 
+// 条件を満たした実績があるかを調べます。
+function checkNewBadges() {
+    const currentLevel = getLevel();
+    const newBadges = [];
+
+    badgeSteps.forEach((badge) => {
+        if (unlockedBadgeIds.includes(badge.id)) {
+            return;
+        }
+
+        if (badge.type === "rotation" && rotationCount >= badge.count) {
+            unlockedBadgeIds.push(badge.id);
+            newBadges.push(badge);
+            return;
+        }
+
+        if (badge.type === "unlock" && isUnlocked(badge.count)) {
+            unlockedBadgeIds.push(badge.id);
+            newBadges.push(badge);
+            return;
+        }
+
+        if (badge.type === "level" && currentLevel >= badge.count) {
+            unlockedBadgeIds.push(badge.id);
+            newBadges.push(badge);
+        }
+    });
+
+    return newBadges;
+}
+
 // 1回回すときの共通処理です。
-function rotateKanji() {
+function rotateKanji(options = {}) {
+    const { playEffect = true } = options;
+    const previousLevel = getLevel();
+
     angle += 360;
     rotationCount += 1;
     kanji.style.transform = `rotate(${angle}deg)`;
+    const unlockedStep = getJustUnlockedStep();
+    const currentLevel = getLevel();
+    const levelUpHappened = currentLevel > previousLevel;
 
-    playClickAnimation();
+    if (playEffect) {
+        playClickAnimation(Boolean(unlockedStep) || levelUpHappened);
+    }
+
+    const newBadges = checkNewBadges();
     updateGameScreen();
 
-    const unlockedStep = getJustUnlockedStep();
     if (unlockedStep) {
-        showUnlockToast(`新機能解放: ${unlockedStep.name}`);
+        showToast(`新機能解放: ${unlockedStep.name}`);
+        playRewardEffect();
+    }
+
+    if (levelUpHappened) {
+        showLevelUpOverlay(currentLevel);
+        playRewardEffect();
+    }
+
+    if (newBadges.length > 0) {
+        showBadgeToast(`実績獲得: ${newBadges[0].name}`);
+        playRewardEffect();
     }
 }
 
 // 文字をクリックしても回せるようにします。
 kanji.addEventListener("click", () => {
-    rotateKanji();
+    rotateKanji({ playEffect: false });
 });
 
 // 下部の回すボタンでも同じ処理を使います。
 spinButton.addEventListener("click", () => {
-    rotateKanji();
+    rotateKanji({ playEffect: true });
 });
 
 // 自動回転のオン・オフを切り替えます。
@@ -235,7 +390,9 @@ autoRotateButton.addEventListener("click", () => {
     }
 
     if (autoRotateIntervalId === null) {
-        autoRotateIntervalId = window.setInterval(rotateKanji, 1000);
+        autoRotateIntervalId = window.setInterval(() => {
+            rotateKanji({ playEffect: false });
+        }, 1000);
         updateAutoRotateButton();
         return;
     }
@@ -248,10 +405,14 @@ autoRotateButton.addEventListener("click", () => {
 resetButton.addEventListener("click", () => {
     angle = 0;
     rotationCount = 0;
+    unlockedBadgeIds = [];
     stopAutoRotate();
     kanji.style.transform = "rotate(0deg)";
     unlockToast.hidden = true;
+    levelUpOverlay.hidden = true;
+    effectLayer.innerHTML = "";
     updateGameScreen();
 });
 
 updateGameScreen();
+levelUpOverlay.hidden = true;
