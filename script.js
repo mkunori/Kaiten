@@ -6,8 +6,6 @@ const levelValue = document.getElementById("level-value");
 const progressText = document.getElementById("progress-text");
 const progressFill = document.getElementById("progress-fill");
 const badgeList = document.getElementById("badge-list");
-const unlockMessage = document.getElementById("unlock-message");
-const nextUnlock = document.getElementById("next-unlock");
 const autoRotateButton = document.getElementById("auto-rotate-button");
 const resetDataButton = document.getElementById("reset-data-button");
 const unlockToast = document.getElementById("unlock-toast");
@@ -147,11 +145,8 @@ function loadGameData() {
 
 // 上部ステータスバーの内容を更新します。
 function updateStatusBar() {
-    const nextStep = getNextStep();
-
     counterValue.textContent = rotationCount;
     levelValue.textContent = getLevel();
-    nextUnlock.textContent = nextStep ? `あと${nextStep.count - rotationCount}回` : "解放済み";
 }
 
 // 実績バッジ一覧を表示します。未獲得のものはロック表示にします。
@@ -221,24 +216,6 @@ function updateAutoRotateButton() {
     }
 
     autoRotateButton.textContent = isEnabled ? "自動回転: ON" : "自動回転: OFF";
-}
-
-// ステージ上の説明メッセージを更新します。
-function updateUnlockMessage() {
-    const justUnlockedStep = getJustUnlockedStep();
-    const nextStep = getNextStep();
-
-    if (justUnlockedStep) {
-        unlockMessage.textContent = `${justUnlockedStep.count}回達成。「${justUnlockedStep.name}」が解放されました。`;
-        return;
-    }
-
-    if (nextStep) {
-        unlockMessage.textContent = `${nextStep.count}回で「${nextStep.name}」が解放されます。`;
-        return;
-    }
-
-    unlockMessage.textContent = "すべての機能が解放されました。";
 }
 
 // 通知を画面上に一時表示します。
@@ -342,7 +319,6 @@ function updateGameScreen() {
     updateKanjiColor();
     updateKanjiEffect();
     updateAutoRotateButton();
-    updateUnlockMessage();
 }
 
 // 自動回転を止める処理です。

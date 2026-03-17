@@ -67,26 +67,15 @@ body {
 }
 
 #stage-area {
-    display: grid;
-    grid-template-rows: auto 1fr;
-    gap: 16px;
-}
-
-#unlock-message {
-    margin: 0;
-    padding: 14px 18px;
-    border-radius: 16px;
-    background: rgba(255, 214, 102, 0.16);
-    border: 1px solid rgba(255, 214, 102, 0.3);
-    color: #fff5bf;
-    font-weight: 700;
-    line-height: 1.5;
+    display: flex;
+    width: 100%;
 }
 
 #kanji-stage {
     display: flex;
     justify-content: center;
     align-items: center;
+    width: 100%;
     position: relative;
     overflow: hidden;
     min-height: 420px;
@@ -467,10 +456,6 @@ body {
 
     #kanji-stage {
         min-height: 260px;
-    }
-
-    #unlock-message {
-        font-size: 14px;
     }
 
     #level-up-overlay {
