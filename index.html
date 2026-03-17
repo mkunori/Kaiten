@@ -9,19 +9,55 @@
 </head>
 
 <body>
-    <!-- 右側に表示する回転数カウンターです -->
-    <aside id="counter-panel" aria-live="polite">
-        <p class="counter-label">回転数</p>
-        <p id="counter-value">0</p>
-        <div id="unlock-list" aria-label="解放機能一覧"></div>
-        <p id="unlock-message">10回で「色変更」が解放されます。</p>
-        <p id="next-unlock">次の解放まで あと10回</p>
-        <button id="auto-rotate-button" type="button" aria-pressed="false" hidden>自動回転: オフ</button>
-        <button id="reset-button" type="button">0に戻す</button>
-    </aside>
+    <div id="app">
+        <!-- 上部のステータスバーです -->
+        <header id="status-bar">
+            <div class="status-item">
+                <span class="status-label">総回転数</span>
+                <strong id="counter-value">0</strong>
+            </div>
+            <div class="status-item">
+                <span class="status-label">レベル</span>
+                <strong id="level-value">1</strong>
+            </div>
+            <div class="status-item">
+                <span class="status-label">次の解放</span>
+                <strong id="next-unlock">あと10回</strong>
+            </div>
+        </header>
 
-    <!-- クリックすると回転する文字です -->
-    <div id="kanji">回</div>
+        <main id="game-screen">
+            <section id="stage-area">
+                <p id="unlock-message">10回で「色変更」が解放されます。</p>
+                <div id="kanji-stage">
+                    <div id="kanji">回</div>
+                </div>
+            </section>
+
+            <section id="progress-panel" aria-label="進行状況">
+                <div class="panel-head">
+                    <h2>解放ゲージ</h2>
+                    <span id="progress-text">0 / 10</span>
+                </div>
+                <div id="progress-track" aria-hidden="true">
+                    <div id="progress-fill"></div>
+                </div>
+
+                <div class="panel-head unlock-head">
+                    <h2>解放リスト</h2>
+                </div>
+                <div id="unlock-list" aria-label="解放機能一覧"></div>
+            </section>
+        </main>
+
+        <footer id="control-bar">
+            <button id="spin-button" type="button">回す</button>
+            <button id="auto-rotate-button" type="button" aria-pressed="false" hidden>自動回転: オフ</button>
+            <button id="reset-button" type="button">リセット</button>
+        </footer>
+    </div>
+
+    <div id="unlock-toast" role="status" aria-live="polite" hidden></div>
     <script src="script.js"></script>
 </body>
 
