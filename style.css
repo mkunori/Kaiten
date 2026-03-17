@@ -35,6 +35,7 @@ body {
     text-align: center;
     user-select: none;
     -webkit-user-select: none;
+    z-index: 10;
 }
 
 .counter-label {
@@ -51,24 +52,32 @@ body {
 
 #reset-button {
     /* 角を丸くして、押せるボタンだとわかりやすくします。 */
+    display: block;
     margin-top: 16px;
+    width: 100%;
     padding: 8px 14px;
     border: 1px solid #222;
     border-radius: 999px;
     background: #fff;
     cursor: pointer;
     font-size: 14px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 #auto-rotate-button {
     /* トグルボタンもリセットボタンと揃えた見た目にします。 */
+    display: block;
     margin-top: 16px;
+    width: 100%;
     padding: 8px 14px;
     border: 1px solid #222;
     border-radius: 999px;
     background: #fff;
     cursor: pointer;
     font-size: 14px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 #auto-rotate-button[aria-pressed="true"] {
