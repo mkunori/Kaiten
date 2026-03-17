@@ -5,6 +5,7 @@ const counterValue = document.getElementById("counter-value");
 const levelValue = document.getElementById("level-value");
 const awakeningTitle = document.getElementById("awakening-title");
 const awakeningState = document.getElementById("awakening-state");
+const awakeningFill = document.getElementById("awakening-fill");
 const awakeningText = document.getElementById("awakening-text");
 const badgeList = document.getElementById("badge-list");
 const autoRotateButton = document.getElementById("auto-rotate-button");
@@ -13,6 +14,7 @@ const unlockToast = document.getElementById("unlock-toast");
 const levelUpOverlay = document.getElementById("level-up-overlay");
 const levelUpValue = document.getElementById("level-up-value");
 const awakeningOverlay = document.getElementById("awakening-overlay");
+const awakeningValue = document.getElementById("awakening-value");
 
 const unlockSteps = [
     { count: 10, name: "色変更" },
@@ -34,8 +36,16 @@ const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
 const levelThresholds = [10, 30, 50, 100];
 const saveDataKey = "kaiten-save-data";
 const awakeningUnlockCount = 100;
-const awakeningDurationMs = 8000;
-const awakeningChance = 0.12;
+const awakeningChargeMax = 10;
+const awakeningMinDurationMs = 4000;
+const awakeningMaxDurationMs = 10000;
+const awakeningNames = [
+    "円環励起",
+    "流転覚醒",
+    "円環共鳴",
+    "輪廻加速",
+    "環動解放"
+];
 
 // 回転数や自動回転の状態を覚えるための変数です。
 let angle = 0;
@@ -45,8 +55,12 @@ let toastTimeoutId = null;
 let levelUpTimeoutId = null;
 let particleSeed = 0;
 let unlockedBadgeIds = [];
+let awakeningCharge = 0;
 let isAwakening = false;
 let awakeningEndsAt = 0;
+let awakeningStartedAt = 0;
+let awakeningDurationMs = 0;
+let currentAwakeningName = "";
 let awakeningTimeoutId = null;
 let awakeningTimerIntervalId = null;
 
@@ -83,6 +97,33 @@ function getAwakeningSecondsLeft() {
     return Math.ceil(millisecondsLeft / 1000);
 }
 
+// 覚醒中の残り時間を、ゲージ用の割合で返します。
+function getAwakeningTimePercent() {
+    if (!isAwakening || awakeningDurationMs <= 0) {
+        return 0;
+    }
+
+    const millisecondsLeft = Math.max(0, awakeningEndsAt - Date.now());
+    return (millisecondsLeft / awakeningDurationMs) * 100;
+}
+
+// 通常時の蓄積ゲージを、割合で返します。
+function getAwakeningChargePercent() {
+    return (awakeningCharge / awakeningChargeMax) * 100;
+}
+
+// 配列の中からランダムで1つ選びます。
+function getRandomItem(items) {
+    const randomIndex = Math.floor(Math.random() * items.length);
+    return items[randomIndex];
+}
+
+// 覚醒時間を4秒から10秒の間でランダムに決めます。
+function getRandomAwakeningDuration() {
+    const range = awakeningMaxDurationMs - awakeningMinDurationMs;
+    return awakeningMinDurationMs + Math.floor(Math.random() * (range + 1));
+}
+
 // 今のゲーム状態を保存しやすい形にまとめます。
 function createSaveData() {
     return {
@@ -92,8 +133,12 @@ function createSaveData() {
             .filter((step) => isUnlocked(step.count))
             .map((step) => step.name),
         unlockedBadgeIds,
+        awakeningCharge,
         isAwakening,
-        awakeningEndsAt
+        awakeningEndsAt,
+        awakeningStartedAt,
+        awakeningDurationMs,
+        currentAwakeningName
     };
 }
 
@@ -126,13 +171,28 @@ function loadGameData() {
         unlockedBadgeIds = Array.isArray(savedData.unlockedBadgeIds)
             ? savedData.unlockedBadgeIds.filter((badgeId) => validBadgeIds.includes(badgeId))
             : [];
+        awakeningCharge = typeof savedData.awakeningCharge === "number"
+            ? Math.min(awakeningChargeMax, Math.max(0, savedData.awakeningCharge))
+            : 0;
         isAwakening = Boolean(savedData.isAwakening);
         awakeningEndsAt = typeof savedData.awakeningEndsAt === "number"
             ? savedData.awakeningEndsAt
             : 0;
+        awakeningStartedAt = typeof savedData.awakeningStartedAt === "number"
+            ? savedData.awakeningStartedAt
+            : 0;
+        awakeningDurationMs = typeof savedData.awakeningDurationMs === "number"
+            ? Math.max(0, savedData.awakeningDurationMs)
+            : 0;
+        currentAwakeningName = typeof savedData.currentAwakeningName === "string"
+            ? savedData.currentAwakeningName
+            : "";
 
         if (isAwakening && awakeningEndsAt <= Date.now()) {
             isAwakening = false;
+            awakeningStartedAt = 0;
+            awakeningDurationMs = 0;
+            currentAwakeningName = "";
             awakeningEndsAt = 0;
         }
 
@@ -154,6 +214,7 @@ function updateAwakeningPanel() {
         awakeningTitle.textContent = "？？？";
         awakeningState.textContent = "？？？";
         awakeningState.classList.remove("active");
+        awakeningFill.style.width = "0%";
         awakeningText.textContent = "ロック中";
         return;
     }
@@ -161,15 +222,17 @@ function updateAwakeningPanel() {
     awakeningTitle.textContent = "覚醒状態";
 
     if (isAwakening) {
-        awakeningState.textContent = "覚醒中";
+        awakeningState.textContent = currentAwakeningName;
         awakeningState.classList.add("active");
+        awakeningFill.style.width = `${getAwakeningTimePercent()}%`;
         awakeningText.textContent = `残り ${getAwakeningSecondsLeft()} 秒`;
         return;
     }
 
     awakeningState.textContent = "通常";
     awakeningState.classList.remove("active");
-    awakeningText.textContent = "解放済み。回転時にランダム発動";
+    awakeningFill.style.width = `${getAwakeningChargePercent()}%`;
+    awakeningText.textContent = `蓄積 ${awakeningCharge} / ${awakeningChargeMax}`;
 }
 
 // 実績バッジ一覧を表示します。未獲得のものはロック表示にします。
@@ -273,6 +336,7 @@ function showLevelUpOverlay(level) {
 
 // 覚醒開始時は中央に大きな演出を表示します。
 function showAwakeningOverlay() {
+    awakeningValue.textContent = currentAwakeningName || "覚醒";
     awakeningOverlay.hidden = false;
     awakeningOverlay.classList.remove("show");
     void awakeningOverlay.offsetWidth;
@@ -362,6 +426,9 @@ function endAwakeningMode() {
     }
 
     isAwakening = false;
+    currentAwakeningName = "";
+    awakeningStartedAt = 0;
+    awakeningDurationMs = 0;
     awakeningEndsAt = 0;
     kanjiStage.classList.remove("flash");
 
@@ -382,8 +449,12 @@ function endAwakeningMode() {
 // 覚醒モードを自動発動します。
 function startAwakeningMode() {
     isAwakening = true;
-    awakeningEndsAt = Date.now() + awakeningDurationMs;
-    showToast("覚醒が始まった");
+    awakeningCharge = 0;
+    currentAwakeningName = getRandomItem(awakeningNames);
+    awakeningDurationMs = getRandomAwakeningDuration();
+    awakeningStartedAt = Date.now();
+    awakeningEndsAt = awakeningStartedAt + awakeningDurationMs;
+    showToast(`${currentAwakeningName} 発動`);
     showAwakeningOverlay();
     playRewardEffect();
     updateGameScreen();
@@ -419,13 +490,15 @@ function stopAutoRotate() {
     autoRotateIntervalId = null;
 }
 
-// 覚醒が解放済みなら、回転時に一定確率で自動発動します。
-function tryStartAwakeningMode() {
+// 覚醒が解放済みなら、回転するたびに蓄積して満タンで自動発動します。
+function addAwakeningCharge() {
     if (isAwakening || !isUnlocked(awakeningUnlockCount)) {
         return;
     }
 
-    if (Math.random() < awakeningChance) {
+    awakeningCharge = Math.min(awakeningChargeMax, awakeningCharge + 1);
+
+    if (awakeningCharge >= awakeningChargeMax) {
         startAwakeningMode();
     }
 }
@@ -471,7 +544,7 @@ function rotateKanji(options = {}) {
     angle += 360;
     rotationCount += spinAmount;
     kanji.style.transform = `rotate(${angle}deg)`;
-    tryStartAwakeningMode();
+    addAwakeningCharge();
     const unlockedStep = getJustUnlockedStep(previousCount, rotationCount);
     const currentLevel = getLevel();
     const levelUpHappened = currentLevel > previousLevel;

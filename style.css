@@ -273,6 +273,24 @@ body {
     color: #ffe28a;
 }
 
+#awakening-track {
+    height: 18px;
+    margin-top: 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#awakening-fill {
+    width: 0;
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #7fe2ff 0%, #ffd166 55%, #ff9eb5 100%);
+    box-shadow: 0 0 18px rgba(255, 209, 102, 0.24);
+    transition: width 0.18s linear;
+}
+
 #awakening-text {
     margin: 6px 0 0;
     font-size: 13px;
