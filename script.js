@@ -19,10 +19,10 @@ const awakeningOverlay = document.getElementById("awakening-overlay");
 const awakeningValue = document.getElementById("awakening-value");
 
 const unlockSteps = [
-    { count: 10, name: "色変更" },
-    { count: 30, name: "自動回転" },
-    { count: 50, name: "エフェクト" },
-    { count: 100, name: "覚醒モード" }
+    { level: 2, name: "色変更" },
+    { level: 3, name: "自動回転" },
+    { level: 4, name: "エフェクト" },
+    { level: 5, name: "覚醒モード" }
 ];
 
 const badgeSteps = [
@@ -36,13 +36,13 @@ const badgeSteps = [
     { id: "spin_500", name: "永劫への接近", detail: "終わりなき巡りへ手が届きはじめる", type: "rotation", count: 500 },
     { id: "spin_700", name: "輪廻の担い手", detail: "回り続ける力をその身に宿した", type: "rotation", count: 700 },
     { id: "spin_1000", name: "永久機関の証明", detail: "回転はついに尽きぬ領域へ至る", type: "rotation", count: 1000 },
-    { id: "level_5", name: "微光の目覚め", detail: "かすかな輝きが回転の奥で目を覚ます", type: "level", count: 5 },
-    { id: "level_10", name: "流転の見習い", detail: "巡りの理に触れはじめた者", type: "level", count: 10 },
-    { id: "level_20", name: "円環の歩み手", detail: "回転の道を確かな足取りで進みゆく", type: "level", count: 20 },
-    { id: "level_30", name: "共鳴の担い手", detail: "幾つもの巡りをその身に響かせる", type: "level", count: 30 },
-    { id: "level_50", name: "永劫の探求者", detail: "果てなき循環の深みを追い求める者", type: "level", count: 50 },
-    { id: "level_75", name: "輪廻の継承者", detail: "巡り続ける力を受け継ぎ、その先へ運ぶ", type: "level", count: 75 },
-    { id: "level_100", name: "円環の証明者", detail: "積み重ねた回転が到達を証明する", type: "level", count: 100 },
+    { id: "level_1", name: "円環の萌芽", detail: "小さな巡りが静かに生まれ落ちる", type: "level", count: 1 },
+    { id: "level_2", name: "微光の目覚め", detail: "かすかな輝きが回転の奥で目を覚ます", type: "level", count: 2 },
+    { id: "level_3", name: "流転の見習い", detail: "巡りの理に触れはじめた者", type: "level", count: 3 },
+    { id: "level_4", name: "円環の歩み手", detail: "回転の道を確かな足取りで進みゆく", type: "level", count: 4 },
+    { id: "level_5", name: "共鳴の担い手", detail: "幾つもの巡りをその身に響かせる", type: "level", count: 5 },
+    { id: "level_6", name: "永劫の探求者", detail: "果てなき循環の深みを追い求める者", type: "level", count: 6 },
+    { id: "level_7", name: "輪廻の継承者", detail: "巡り続ける力を受け継ぎ、その先へ運ぶ", type: "level", count: 7 },
     { id: "awakening_enkankirei", name: "円環励起", detail: "円環は活性し、力を帯びる", type: "awakening", awakeningName: "円環励起" },
     { id: "awakening_rutenkakusei", name: "流転覚醒", detail: "流れは目覚め、巡りを強めていく", type: "awakening", awakeningName: "流転覚醒" },
     { id: "awakening_enkankyomei", name: "円環共鳴", detail: "幾つもの回転がひとつの響きとなる", type: "awakening", awakeningName: "円環共鳴" },
@@ -57,7 +57,7 @@ const levelBaseRequirement = 20;
 const levelRequirementStep = 10;
 const autoRotateNormalIntervalMs = 1000;
 const autoRotateAwakeningIntervalMs = 500;
-const awakeningUnlockCount = 100;
+const awakeningUnlockLevel = 5;
 const awakeningChargeMax = 10;
 const awakeningMinDurationMs = 4000;
 const awakeningMaxDurationMs = 10000;
@@ -88,9 +88,9 @@ let awakeningTimeoutId = null;
 let awakeningTimerIntervalId = null;
 let awakeningCooldownEndsAt = 0;
 
-// その回数の機能が解放済みかを確認します。
-function isUnlocked(stepCount) {
-    return rotationCount >= stepCount;
+// 指定レベルの機能が解放済みかを確認します。
+function isFeatureUnlocked(requiredLevel) {
+    return getLevel() >= requiredLevel;
 }
 
 // 次のレベルに必要な回転数を返します。
@@ -137,9 +137,9 @@ function getLevelProgress() {
     }
 }
 
-// 今回の回転で新しく解放された機能を調べます。
-function getJustUnlockedStep(previousCount, currentCount) {
-    return unlockSteps.find((step) => previousCount < step.count && currentCount >= step.count) || null;
+// 今回のレベルアップで新しく解放された機能を調べます。
+function getJustUnlockedStep(previousLevel, currentLevel) {
+    return unlockSteps.find((step) => previousLevel < step.level && currentLevel >= step.level) || null;
 }
 
 // 覚醒中なら、残り時間を秒で返します。
@@ -196,7 +196,7 @@ function createSaveData() {
         rotationCount,
         level: getLevel(),
         unlockedFeatures: unlockSteps
-            .filter((step) => isUnlocked(step.count))
+            .filter((step) => isFeatureUnlocked(step.level))
             .map((step) => step.name),
         unlockedBadgeIds,
         awakeningCharge,
@@ -287,7 +287,7 @@ function updateStatusBar() {
 
 // 覚醒状態の表示を更新します。
 function updateAwakeningPanel() {
-    if (!isUnlocked(awakeningUnlockCount)) {
+    if (!isFeatureUnlocked(awakeningUnlockLevel)) {
         awakeningTitle.textContent = "？？？";
         awakeningState.textContent = "？？？";
         awakeningState.classList.remove("active");
@@ -345,7 +345,7 @@ function updateBadgeList() {
 
 // 色変更が解放されたあとだけ、文字色を切り替えます。
 function updateKanjiColor() {
-    if (!isUnlocked(10)) {
+    if (!isFeatureUnlocked(2)) {
         kanji.style.color = "#f7fbff";
         return;
     }
@@ -356,7 +356,7 @@ function updateKanjiColor() {
 
 // エフェクト解放後だけ、文字に光る見た目を追加します。
 function updateKanjiEffect() {
-    if (isUnlocked(50)) {
+    if (isFeatureUnlocked(4)) {
         kanji.classList.add("effect-unlocked");
     } else {
         kanji.classList.remove("effect-unlocked");
@@ -372,7 +372,7 @@ function updateAwakeningBackground() {
 
 // 下部の自動回転ボタンを、解放状況に応じて更新します。
 function updateAutoRotateButton() {
-    const autoUnlocked = isUnlocked(30);
+    const autoUnlocked = isFeatureUnlocked(3);
     const isEnabled = autoRotateIntervalId !== null;
 
     autoRotateButton.hidden = false;
@@ -666,7 +666,7 @@ function refreshAutoRotateSpeed() {
 
 // 手動クリック時だけ覚醒ゲージをためます。
 function addAwakeningChargeByManualSpin() {
-    if (isAwakening || !isUnlocked(awakeningUnlockCount) || isAwakeningCooldownActive()) {
+    if (isAwakening || !isFeatureUnlocked(awakeningUnlockLevel) || isAwakeningCooldownActive()) {
         return;
     }
 
@@ -675,7 +675,7 @@ function addAwakeningChargeByManualSpin() {
 
 // 手動クリック時だけ覚醒モードへの突入判定を行います。
 function tryStartAwakeningByManualSpin() {
-    if (isAwakening || !isUnlocked(awakeningUnlockCount) || isAwakeningCooldownActive()) {
+    if (isAwakening || !isFeatureUnlocked(awakeningUnlockLevel) || isAwakeningCooldownActive()) {
         return;
     }
 
@@ -712,7 +712,6 @@ function checkNewBadges() {
 // 1回回すときの共通処理です。
 function rotateKanji(options = {}) {
     const { playEffect = true, isManualSpin = false } = options;
-    const previousCount = rotationCount;
     const previousLevel = getLevel();
     const spinAmount = isAwakening ? 2 : 1;
 
@@ -725,8 +724,8 @@ function rotateKanji(options = {}) {
         tryStartAwakeningByManualSpin();
     }
 
-    const unlockedStep = getJustUnlockedStep(previousCount, rotationCount);
     const currentLevel = getLevel();
+    const unlockedStep = getJustUnlockedStep(previousLevel, currentLevel);
     const levelUpHappened = currentLevel > previousLevel;
 
     if (playEffect || isAwakening) {
@@ -737,7 +736,7 @@ function rotateKanji(options = {}) {
     updateGameScreen();
 
     if (unlockedStep) {
-        if (unlockedStep.count === 30) {
+        if (unlockedStep.level === 3) {
             startAutoRotate();
             updateAutoRotateButton();
         }
@@ -766,7 +765,7 @@ kanji.addEventListener("click", () => {
 
 // 自動回転のオン・オフを切り替えます。
 autoRotateButton.addEventListener("click", () => {
-    if (!isUnlocked(30)) {
+    if (!isFeatureUnlocked(3)) {
         return;
     }
 
