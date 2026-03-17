@@ -41,7 +41,13 @@ const badgeSteps = [
     { id: "level_30", name: "共鳴の担い手", detail: "幾つもの巡りをその身に響かせる", type: "level", count: 30 },
     { id: "level_50", name: "永劫の探求者", detail: "果てなき循環の深みを追い求める者", type: "level", count: 50 },
     { id: "level_75", name: "輪廻の継承者", detail: "巡り続ける力を受け継ぎ、その先へ運ぶ", type: "level", count: 75 },
-    { id: "level_100", name: "円環の証明者", detail: "積み重ねた回転が到達を証明する", type: "level", count: 100 }
+    { id: "level_100", name: "円環の証明者", detail: "積み重ねた回転が到達を証明する", type: "level", count: 100 },
+    { id: "awakening_enkankirei", name: "円環励起", detail: "円環は活性し、力を帯びる", type: "awakening", awakeningName: "円環励起" },
+    { id: "awakening_rutenkakusei", name: "流転覚醒", detail: "流れは目覚め、巡りを強めていく", type: "awakening", awakeningName: "流転覚醒" },
+    { id: "awakening_enkankyomei", name: "円環共鳴", detail: "幾つもの回転がひとつの響きとなる", type: "awakening", awakeningName: "円環共鳴" },
+    { id: "awakening_rinnekasoku", name: "輪廻加速", detail: "巡りは熱を帯び、さらに速さを増す", type: "awakening", awakeningName: "輪廻加速" },
+    { id: "awakening_kandokaiho", name: "環動解放", detail: "閉じていた循環が解き放たれる", type: "awakening", awakeningName: "環動解放" },
+    { id: "awakening_complete", name: "円環の理解者", detail: "あらゆる覚醒を知り、巡りの全体像に触れた", type: "awakening-complete" }
 ];
 
 const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
@@ -394,6 +400,40 @@ function showBadgeToast(badge) {
     showToast(message, "badge-toast");
 }
 
+// 覚醒名に対応する実績を探します。
+function findAwakeningBadge(awakeningName) {
+    return badgeSteps.find((badge) => (
+        badge.type === "awakening" && badge.awakeningName === awakeningName
+    )) || null;
+}
+
+// 5種類の覚醒実績をすべて持っているか調べます。
+function hasAllAwakeningBadges() {
+    const awakeningBadges = badgeSteps.filter((badge) => badge.type === "awakening");
+
+    return awakeningBadges.every((badge) => unlockedBadgeIds.includes(badge.id));
+}
+
+// 覚醒開始時の実績を判定します。
+function checkAwakeningBadges(awakeningName) {
+    const newBadges = [];
+    const awakeningBadge = findAwakeningBadge(awakeningName);
+
+    if (awakeningBadge && !unlockedBadgeIds.includes(awakeningBadge.id)) {
+        unlockedBadgeIds.push(awakeningBadge.id);
+        newBadges.push(awakeningBadge);
+    }
+
+    const completeBadge = badgeSteps.find((badge) => badge.type === "awakening-complete");
+
+    if (completeBadge && !unlockedBadgeIds.includes(completeBadge.id) && hasAllAwakeningBadges()) {
+        unlockedBadgeIds.push(completeBadge.id);
+        newBadges.push(completeBadge);
+    }
+
+    return newBadges;
+}
+
 // レベルアップ時は中央付近に大きく表示します。
 function showLevelUpOverlay(level) {
     levelUpValue.textContent = `Lv.${level}`;
@@ -535,12 +575,18 @@ function startAwakeningMode() {
     awakeningDurationMs = getRandomAwakeningDuration();
     awakeningStartedAt = Date.now();
     awakeningEndsAt = awakeningStartedAt + awakeningDurationMs;
+    const newAwakeningBadges = checkAwakeningBadges(currentAwakeningName);
     showToast(`${currentAwakeningName} 発動`);
     showAwakeningOverlay();
     playRewardEffect();
     updateGameScreen();
     startAwakeningTimerDisplay();
     saveGameData();
+
+    if (newAwakeningBadges.length > 0) {
+        showBadgeToast(newAwakeningBadges[0]);
+        playRewardEffect();
+    }
 
     if (awakeningTimeoutId !== null) {
         window.clearTimeout(awakeningTimeoutId);
