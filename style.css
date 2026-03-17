@@ -7,6 +7,12 @@ body {
         radial-gradient(circle at top, #2f4f8f 0%, #132342 45%, #09111f 100%);
     color: #f5f7ff;
     font-family: "Segoe UI", sans-serif;
+    transition: background 0.45s ease;
+}
+
+body.awakening-mode {
+    background:
+        radial-gradient(circle at top, #5d6fd8 0%, #2c2c68 34%, #120f2a 68%, #080d18 100%);
 }
 
 [hidden] {
@@ -85,6 +91,18 @@ body {
         linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
     border: 1px solid rgba(170, 200, 255, 0.22);
     box-shadow: inset 0 0 60px rgba(120, 180, 255, 0.08);
+    transition: background 0.35s ease, box-shadow 0.35s ease, border-color 0.35s ease;
+}
+
+body.awakening-mode #kanji-stage {
+    background:
+        radial-gradient(circle at top, rgba(255, 221, 128, 0.26), transparent 50%),
+        radial-gradient(circle at bottom, rgba(88, 215, 255, 0.18), transparent 58%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
+    border-color: rgba(255, 225, 138, 0.34);
+    box-shadow:
+        inset 0 0 72px rgba(255, 209, 102, 0.1),
+        0 0 34px rgba(88, 215, 255, 0.12);
 }
 
 #kanji-stage.bump {

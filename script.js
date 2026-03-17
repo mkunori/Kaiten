@@ -1,6 +1,7 @@
 const kanji = document.getElementById("kanji");
 const kanjiStage = document.getElementById("kanji-stage");
 const effectLayer = document.getElementById("effect-layer");
+const pageBody = document.body;
 const counterValue = document.getElementById("counter-value");
 const levelValue = document.getElementById("level-value");
 const levelProgressValue = document.getElementById("level-progress-value");
@@ -54,6 +55,8 @@ const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
 const saveDataKey = "kaiten-save-data";
 const levelBaseRequirement = 20;
 const levelRequirementStep = 10;
+const autoRotateNormalIntervalMs = 1000;
+const autoRotateAwakeningIntervalMs = 500;
 const awakeningUnlockCount = 100;
 const awakeningChargeMax = 10;
 const awakeningMinDurationMs = 4000;
@@ -362,6 +365,11 @@ function updateKanjiEffect() {
     kanji.classList.toggle("awakening-active", isAwakening);
 }
 
+// 覚醒中は背景の色味も切り替えて、強化状態を見やすくします。
+function updateAwakeningBackground() {
+    pageBody.classList.toggle("awakening-mode", isAwakening);
+}
+
 // 下部の自動回転ボタンを、解放状況に応じて更新します。
 function updateAutoRotateButton() {
     const autoUnlocked = isUnlocked(30);
@@ -563,6 +571,7 @@ function endAwakeningMode() {
     }
 
     updateGameScreen();
+    refreshAutoRotateSpeed();
     startAwakeningTimerDisplay();
     saveGameData();
 }
@@ -580,6 +589,7 @@ function startAwakeningMode() {
     showAwakeningOverlay();
     playRewardEffect();
     updateGameScreen();
+    refreshAutoRotateSpeed();
     startAwakeningTimerDisplay();
     saveGameData();
 
@@ -604,6 +614,7 @@ function updateGameScreen() {
     updateBadgeList();
     updateKanjiColor();
     updateKanjiEffect();
+    updateAwakeningBackground();
     updateAutoRotateButton();
 }
 
@@ -617,15 +628,40 @@ function stopAutoRotate() {
     autoRotateIntervalId = null;
 }
 
+// 今の状態に応じた自動回転の間隔を返します。
+function getAutoRotateIntervalMs() {
+    if (isAwakening) {
+        return autoRotateAwakeningIntervalMs;
+    }
+
+    return autoRotateNormalIntervalMs;
+}
+
+// 指定した間隔で自動回転を開始します。
+function startAutoRotateWithInterval(intervalMs) {
+    autoRotateIntervalId = window.setInterval(() => {
+        rotateKanji({ playEffect: false, isManualSpin: false });
+    }, intervalMs);
+}
+
 // 自動回転を開始します。すでに動いているときは何もしません。
 function startAutoRotate() {
     if (autoRotateIntervalId !== null) {
         return;
     }
 
-    autoRotateIntervalId = window.setInterval(() => {
-        rotateKanji({ playEffect: false, isManualSpin: false });
-    }, 1000);
+    startAutoRotateWithInterval(getAutoRotateIntervalMs());
+}
+
+// 自動回転中なら、今の状態に合わせて速度を更新します。
+function refreshAutoRotateSpeed() {
+    if (autoRotateIntervalId === null) {
+        return;
+    }
+
+    stopAutoRotate();
+    startAutoRotateWithInterval(getAutoRotateIntervalMs());
+    updateAutoRotateButton();
 }
 
 // 手動クリック時だけ覚醒ゲージをためます。
