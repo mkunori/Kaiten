@@ -3,11 +3,20 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>回れ回れ</title>
     <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
+    <!-- 右側に表示する回転数カウンターです -->
+    <aside id="counter-panel" aria-live="polite">
+        <p class="counter-label">回転数</p>
+        <p id="counter-value">0</p>
+        <button id="reset-button" type="button">0に戻す</button>
+    </aside>
+
+    <!-- クリックすると回転する文字です -->
     <div id="kanji">回</div>
     <script src="script.js"></script>
 </body>

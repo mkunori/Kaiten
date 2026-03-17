@@ -1,15 +1,61 @@
 body {
+    /* 画面の中央に回転する文字を置くための設定です。 */
     margin: 0;
     height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
+    position: relative;
 }
 
 #kanji {
+    /* 文字を大きく表示し、クリックできる見た目にします。 */
     font-size: 120px;
     cursor: pointer;
     transition: transform 0.6s;
     user-select: none;
     -webkit-user-select: none;
+}
+
+#counter-panel {
+    /* カウンターを画面右側に固定表示します。 */
+    position: fixed;
+    top: 50%;
+    right: 32px;
+    transform: translateY(-50%);
+    min-width: 120px;
+    padding: 16px 20px;
+    border: 1px solid #222;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.92);
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.counter-label {
+    margin: 0 0 8px;
+    font-size: 16px;
+}
+
+#counter-value {
+    margin: 0;
+    font-size: 40px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+#reset-button {
+    /* 角を丸くして、押せるボタンだとわかりやすくします。 */
+    margin-top: 16px;
+    padding: 8px 14px;
+    border: 1px solid #222;
+    border-radius: 999px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+#reset-button:hover {
+    background: #f3f3f3;
 }
