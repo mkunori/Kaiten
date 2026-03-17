@@ -25,12 +25,23 @@ const unlockSteps = [
 ];
 
 const badgeSteps = [
-    { id: "first-spin", name: "円環の始まり", detail: "最初の回転を刻んだ", type: "rotation", count: 1 },
-    { id: "spin-10", name: "微動の刻", detail: "小さな揺らぎが力を帯びる", type: "rotation", count: 10 },
-    { id: "spin-50", name: "加速する円環", detail: "巡りは勢いを増していく", type: "rotation", count: 50 },
-    { id: "spin-100", name: "円環の探求者", detail: "終わりなき回転の深奥に触れた", type: "rotation", count: 100 },
-    { id: "unlock-auto", name: "永久機関", detail: "円環は自ら巡り始める", type: "unlock", count: 30 },
-    { id: "level-3", name: "覚醒", detail: "眠っていた力が目を覚ました", type: "level", count: 3 }
+    { id: "spin_1", name: "円環の始まり", detail: "最初の回転を刻んだ", type: "rotation", count: 1 },
+    { id: "spin_10", name: "微動の刻", detail: "わずかな揺らぎが動きへ変わる", type: "rotation", count: 10 },
+    { id: "spin_25", name: "流転の兆し", detail: "回転は静かに流れを帯びはじめる", type: "rotation", count: 25 },
+    { id: "spin_50", name: "加速する円環", detail: "円は意思を持つように勢いを増す", type: "rotation", count: 50 },
+    { id: "spin_100", name: "円環の探求者", detail: "回転の理を追いはじめた者", type: "rotation", count: 100 },
+    { id: "spin_200", name: "共鳴する輪", detail: "幾重もの回転が響き合う", type: "rotation", count: 200 },
+    { id: "spin_300", name: "流転の観測者", detail: "絶えぬ動きを見つめ続ける者", type: "rotation", count: 300 },
+    { id: "spin_500", name: "永劫への接近", detail: "終わりなき巡りへ手が届きはじめる", type: "rotation", count: 500 },
+    { id: "spin_700", name: "輪廻の担い手", detail: "回り続ける力をその身に宿した", type: "rotation", count: 700 },
+    { id: "spin_1000", name: "永久機関の証明", detail: "回転はついに尽きぬ領域へ至る", type: "rotation", count: 1000 },
+    { id: "level_5", name: "微光の目覚め", detail: "かすかな輝きが回転の奥で目を覚ます", type: "level", count: 5 },
+    { id: "level_10", name: "流転の見習い", detail: "巡りの理に触れはじめた者", type: "level", count: 10 },
+    { id: "level_20", name: "円環の歩み手", detail: "回転の道を確かな足取りで進みゆく", type: "level", count: 20 },
+    { id: "level_30", name: "共鳴の担い手", detail: "幾つもの巡りをその身に響かせる", type: "level", count: 30 },
+    { id: "level_50", name: "永劫の探求者", detail: "果てなき循環の深みを追い求める者", type: "level", count: 50 },
+    { id: "level_75", name: "輪廻の継承者", detail: "巡り続ける力を受け継ぎ、その先へ運ぶ", type: "level", count: 75 },
+    { id: "level_100", name: "円環の証明者", detail: "積み重ねた回転が到達を証明する", type: "level", count: 100 }
 ];
 
 const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
@@ -378,7 +389,8 @@ function showToast(message, variant = "") {
 }
 
 // バッジ獲得時は通知の色を少し変えます。
-function showBadgeToast(message) {
+function showBadgeToast(badge) {
+    const message = `実績解除：${badge.name}\n${badge.detail}`;
     showToast(message, "badge-toast");
 }
 
@@ -559,6 +571,17 @@ function stopAutoRotate() {
     autoRotateIntervalId = null;
 }
 
+// 自動回転を開始します。すでに動いているときは何もしません。
+function startAutoRotate() {
+    if (autoRotateIntervalId !== null) {
+        return;
+    }
+
+    autoRotateIntervalId = window.setInterval(() => {
+        rotateKanji({ playEffect: false, isManualSpin: false });
+    }, 1000);
+}
+
 // 手動クリック時だけ覚醒ゲージをためます。
 function addAwakeningChargeByManualSpin() {
     if (isAwakening || !isUnlocked(awakeningUnlockCount) || isAwakeningCooldownActive()) {
@@ -590,12 +613,6 @@ function checkNewBadges() {
         }
 
         if (badge.type === "rotation" && rotationCount >= badge.count) {
-            unlockedBadgeIds.push(badge.id);
-            newBadges.push(badge);
-            return;
-        }
-
-        if (badge.type === "unlock" && isUnlocked(badge.count)) {
             unlockedBadgeIds.push(badge.id);
             newBadges.push(badge);
             return;
@@ -638,6 +655,11 @@ function rotateKanji(options = {}) {
     updateGameScreen();
 
     if (unlockedStep) {
+        if (unlockedStep.count === 30) {
+            startAutoRotate();
+            updateAutoRotateButton();
+        }
+
         showToast(`新機能解放: ${unlockedStep.name}`);
         playRewardEffect();
     }
@@ -648,7 +670,7 @@ function rotateKanji(options = {}) {
     }
 
     if (newBadges.length > 0) {
-        showBadgeToast(`実績解除：${newBadges[0].name}`);
+        showBadgeToast(newBadges[0]);
         playRewardEffect();
     }
 
@@ -667,9 +689,7 @@ autoRotateButton.addEventListener("click", () => {
     }
 
     if (autoRotateIntervalId === null) {
-        autoRotateIntervalId = window.setInterval(() => {
-            rotateKanji({ playEffect: false, isManualSpin: false });
-        }, 1000);
+        startAutoRotate();
         updateAutoRotateButton();
         return;
     }
