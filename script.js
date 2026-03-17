@@ -21,12 +21,12 @@ const unlockSteps = [
 ];
 
 const badgeSteps = [
-    { id: "first-spin", name: "初回転", detail: "1回回す", type: "rotation", count: 1 },
-    { id: "spin-10", name: "10回転達成", detail: "10回回す", type: "rotation", count: 10 },
-    { id: "spin-50", name: "50回転達成", detail: "50回回す", type: "rotation", count: 50 },
-    { id: "spin-100", name: "100回転達成", detail: "100回回す", type: "rotation", count: 100 },
-    { id: "unlock-auto", name: "自動回転解放", detail: "自動回転機能を解放する", type: "unlock", count: 30 },
-    { id: "level-3", name: "レベルアップ初心者", detail: "レベル3に到達する", type: "level", count: 3 }
+    { id: "first-spin", name: "円環の始まり", detail: "最初の回転を刻んだ", type: "rotation", count: 1 },
+    { id: "spin-10", name: "微動の刻", detail: "小さな揺らぎが力を帯びる", type: "rotation", count: 10 },
+    { id: "spin-50", name: "加速する円環", detail: "巡りは勢いを増していく", type: "rotation", count: 50 },
+    { id: "spin-100", name: "円環の探求者", detail: "終わりなき回転の深奥に触れた", type: "rotation", count: 100 },
+    { id: "unlock-auto", name: "永久機関", detail: "円環は自ら巡り始める", type: "unlock", count: 30 },
+    { id: "level-3", name: "覚醒", detail: "眠っていた力が目を覚ました", type: "level", count: 3 }
 ];
 
 const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
@@ -416,7 +416,7 @@ function rotateKanji(options = {}) {
     }
 
     if (newBadges.length > 0) {
-        showBadgeToast(`実績獲得: ${newBadges[0].name}`);
+        showBadgeToast(`実績解除：${newBadges[0].name}`);
         playRewardEffect();
     }
 
