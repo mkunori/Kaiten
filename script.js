@@ -3,8 +3,6 @@ const kanjiStage = document.getElementById("kanji-stage");
 const effectLayer = document.getElementById("effect-layer");
 const counterValue = document.getElementById("counter-value");
 const levelValue = document.getElementById("level-value");
-const progressText = document.getElementById("progress-text");
-const progressFill = document.getElementById("progress-fill");
 const badgeList = document.getElementById("badge-list");
 const autoRotateButton = document.getElementById("auto-rotate-button");
 const resetDataButton = document.getElementById("reset-data-button");
@@ -58,41 +56,9 @@ function getLevel() {
     return level;
 }
 
-// 次に解放される機能を探します。
-function getNextStep() {
-    return unlockSteps.find((step) => rotationCount < step.count) || null;
-}
-
 // 今の回転数が、ちょうど解放タイミングかを調べます。
 function getJustUnlockedStep() {
     return unlockSteps.find((step) => step.count === rotationCount) || null;
-}
-
-// 現在の進行ゲージに必要な情報をまとめます。
-function getProgressInfo() {
-    const nextStep = getNextStep();
-
-    if (!nextStep) {
-        return {
-            current: 1,
-            total: 1,
-            percent: 100
-        };
-    }
-
-    const previousStep = unlockSteps
-        .filter((step) => step.count < nextStep.count && isUnlocked(step.count))
-        .at(-1);
-
-    const startCount = previousStep ? previousStep.count : 0;
-    const total = nextStep.count - startCount;
-    const current = rotationCount - startCount;
-
-    return {
-        current,
-        total,
-        percent: (current / total) * 100
-    };
 }
 
 // 今のゲーム状態を保存しやすい形にまとめます。
@@ -170,14 +136,6 @@ function updateBadgeList() {
         item.appendChild(badgeDetail);
         badgeList.appendChild(item);
     });
-}
-
-// 次の解放までのゲージと数値を更新します。
-function updateProgressGauge() {
-    const progress = getProgressInfo();
-
-    progressText.textContent = `${progress.current} / ${progress.total}`;
-    progressFill.style.width = `${progress.percent}%`;
 }
 
 // 色変更が解放されたあとだけ、文字色を切り替えます。
@@ -315,7 +273,6 @@ function playRewardEffect() {
 function updateGameScreen() {
     updateStatusBar();
     updateBadgeList();
-    updateProgressGauge();
     updateKanjiColor();
     updateKanjiEffect();
     updateAutoRotateButton();
