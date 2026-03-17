@@ -3,17 +3,22 @@ const kanjiStage = document.getElementById("kanji-stage");
 const effectLayer = document.getElementById("effect-layer");
 const counterValue = document.getElementById("counter-value");
 const levelValue = document.getElementById("level-value");
+const awakeningTitle = document.getElementById("awakening-title");
+const awakeningState = document.getElementById("awakening-state");
+const awakeningText = document.getElementById("awakening-text");
 const badgeList = document.getElementById("badge-list");
 const autoRotateButton = document.getElementById("auto-rotate-button");
 const resetDataButton = document.getElementById("reset-data-button");
 const unlockToast = document.getElementById("unlock-toast");
 const levelUpOverlay = document.getElementById("level-up-overlay");
 const levelUpValue = document.getElementById("level-up-value");
+const awakeningOverlay = document.getElementById("awakening-overlay");
 
 const unlockSteps = [
     { count: 10, name: "色変更" },
     { count: 30, name: "自動回転" },
-    { count: 50, name: "エフェクト" }
+    { count: 50, name: "エフェクト" },
+    { count: 100, name: "覚醒モード" }
 ];
 
 const badgeSteps = [
@@ -28,6 +33,9 @@ const badgeSteps = [
 const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
 const levelThresholds = [10, 30, 50, 100];
 const saveDataKey = "kaiten-save-data";
+const awakeningUnlockCount = 100;
+const awakeningDurationMs = 8000;
+const awakeningChance = 0.12;
 
 // 回転数や自動回転の状態を覚えるための変数です。
 let angle = 0;
@@ -37,6 +45,10 @@ let toastTimeoutId = null;
 let levelUpTimeoutId = null;
 let particleSeed = 0;
 let unlockedBadgeIds = [];
+let isAwakening = false;
+let awakeningEndsAt = 0;
+let awakeningTimeoutId = null;
+let awakeningTimerIntervalId = null;
 
 // その回数の機能が解放済みかを確認します。
 function isUnlocked(stepCount) {
@@ -56,9 +68,19 @@ function getLevel() {
     return level;
 }
 
-// 今の回転数が、ちょうど解放タイミングかを調べます。
-function getJustUnlockedStep() {
-    return unlockSteps.find((step) => step.count === rotationCount) || null;
+// 今回の回転で新しく解放された機能を調べます。
+function getJustUnlockedStep(previousCount, currentCount) {
+    return unlockSteps.find((step) => previousCount < step.count && currentCount >= step.count) || null;
+}
+
+// 覚醒中なら、残り時間を秒で返します。
+function getAwakeningSecondsLeft() {
+    if (!isAwakening) {
+        return 0;
+    }
+
+    const millisecondsLeft = Math.max(0, awakeningEndsAt - Date.now());
+    return Math.ceil(millisecondsLeft / 1000);
 }
 
 // 今のゲーム状態を保存しやすい形にまとめます。
@@ -69,7 +91,9 @@ function createSaveData() {
         unlockedFeatures: unlockSteps
             .filter((step) => isUnlocked(step.count))
             .map((step) => step.name),
-        unlockedBadgeIds
+        unlockedBadgeIds,
+        isAwakening,
+        awakeningEndsAt
     };
 }
 
@@ -102,6 +126,15 @@ function loadGameData() {
         unlockedBadgeIds = Array.isArray(savedData.unlockedBadgeIds)
             ? savedData.unlockedBadgeIds.filter((badgeId) => validBadgeIds.includes(badgeId))
             : [];
+        isAwakening = Boolean(savedData.isAwakening);
+        awakeningEndsAt = typeof savedData.awakeningEndsAt === "number"
+            ? savedData.awakeningEndsAt
+            : 0;
+
+        if (isAwakening && awakeningEndsAt <= Date.now()) {
+            isAwakening = false;
+            awakeningEndsAt = 0;
+        }
 
         kanji.style.transform = `rotate(${angle}deg)`;
     } catch (error) {
@@ -113,6 +146,30 @@ function loadGameData() {
 function updateStatusBar() {
     counterValue.textContent = rotationCount;
     levelValue.textContent = getLevel();
+}
+
+// 覚醒状態の表示を更新します。
+function updateAwakeningPanel() {
+    if (!isUnlocked(awakeningUnlockCount)) {
+        awakeningTitle.textContent = "？？？";
+        awakeningState.textContent = "？？？";
+        awakeningState.classList.remove("active");
+        awakeningText.textContent = "ロック中";
+        return;
+    }
+
+    awakeningTitle.textContent = "覚醒状態";
+
+    if (isAwakening) {
+        awakeningState.textContent = "覚醒中";
+        awakeningState.classList.add("active");
+        awakeningText.textContent = `残り ${getAwakeningSecondsLeft()} 秒`;
+        return;
+    }
+
+    awakeningState.textContent = "通常";
+    awakeningState.classList.remove("active");
+    awakeningText.textContent = "解放済み。回転時にランダム発動";
 }
 
 // 実績バッジ一覧を表示します。未獲得のものはロック表示にします。
@@ -153,10 +210,11 @@ function updateKanjiColor() {
 function updateKanjiEffect() {
     if (isUnlocked(50)) {
         kanji.classList.add("effect-unlocked");
-        return;
+    } else {
+        kanji.classList.remove("effect-unlocked");
     }
 
-    kanji.classList.remove("effect-unlocked");
+    kanji.classList.toggle("awakening-active", isAwakening);
 }
 
 // 下部の自動回転ボタンを、解放状況に応じて更新します。
@@ -213,11 +271,23 @@ function showLevelUpOverlay(level) {
     }, 1300);
 }
 
+// 覚醒開始時は中央に大きな演出を表示します。
+function showAwakeningOverlay() {
+    awakeningOverlay.hidden = false;
+    awakeningOverlay.classList.remove("show");
+    void awakeningOverlay.offsetWidth;
+    awakeningOverlay.classList.add("show");
+
+    window.setTimeout(() => {
+        awakeningOverlay.hidden = true;
+    }, 1600);
+}
+
 // エフェクト用のリングを追加します。
 function createRingEffect(isSpecial) {
     const ring = document.createElement("span");
 
-    ring.className = isSpecial ? "ring-effect special" : "ring-effect";
+    ring.className = isSpecial || isAwakening ? "ring-effect special" : "ring-effect";
     ring.addEventListener("animationend", () => {
         ring.remove();
     });
@@ -228,12 +298,13 @@ function createRingEffect(isSpecial) {
 function createParticleEffect(isSpecial) {
     const particle = document.createElement("span");
     const angleDegree = (particleSeed * 47) % 360;
-    const distance = isSpecial ? 78 + (particleSeed % 28) : 52 + (particleSeed % 20);
+    const boosted = isSpecial || isAwakening;
+    const distance = boosted ? 78 + (particleSeed % 28) : 52 + (particleSeed % 20);
     const moveX = Math.cos((angleDegree * Math.PI) / 180) * distance;
     const moveY = Math.sin((angleDegree * Math.PI) / 180) * distance;
 
     particleSeed += 1;
-    particle.className = isSpecial ? "particle special" : "particle";
+    particle.className = boosted ? "particle special" : "particle";
     particle.style.setProperty("--move-x", `${moveX.toFixed(1)}px`);
     particle.style.setProperty("--move-y", `${moveY.toFixed(1)}px`);
     particle.addEventListener("animationend", () => {
@@ -246,15 +317,15 @@ function createParticleEffect(isSpecial) {
 function playClickAnimation(isSpecial = false) {
     kanjiStage.classList.remove("bump");
     kanjiStage.classList.remove("flash");
-    kanji.classList.remove("pop");
+    kanji.classList.remove("surge");
     void kanjiStage.offsetWidth;
     kanjiStage.classList.add("bump");
     kanjiStage.classList.add("flash");
-    kanji.classList.add("pop");
+    kanji.classList.add("surge");
 
     createRingEffect(isSpecial);
 
-    const particleCount = isSpecial ? 14 : 8;
+    const particleCount = isSpecial || isAwakening ? 14 : 8;
     for (let index = 0; index < particleCount; index += 1) {
         createParticleEffect(isSpecial);
     }
@@ -269,9 +340,69 @@ function playRewardEffect() {
     }
 }
 
+// 覚醒中の残り時間表示を定期的に更新します。
+function startAwakeningTimerDisplay() {
+    if (awakeningTimerIntervalId !== null) {
+        window.clearInterval(awakeningTimerIntervalId);
+    }
+
+    awakeningTimerIntervalId = window.setInterval(() => {
+        if (!isAwakening) {
+            return;
+        }
+
+        updateAwakeningPanel();
+    }, 250);
+}
+
+// 覚醒モードを終了して通常状態へ戻します。
+function endAwakeningMode() {
+    if (!isAwakening) {
+        return;
+    }
+
+    isAwakening = false;
+    awakeningEndsAt = 0;
+    kanjiStage.classList.remove("flash");
+
+    if (awakeningTimeoutId !== null) {
+        window.clearTimeout(awakeningTimeoutId);
+        awakeningTimeoutId = null;
+    }
+
+    if (awakeningTimerIntervalId !== null) {
+        window.clearInterval(awakeningTimerIntervalId);
+        awakeningTimerIntervalId = null;
+    }
+
+    updateGameScreen();
+    saveGameData();
+}
+
+// 覚醒モードを自動発動します。
+function startAwakeningMode() {
+    isAwakening = true;
+    awakeningEndsAt = Date.now() + awakeningDurationMs;
+    showToast("覚醒が始まった");
+    showAwakeningOverlay();
+    playRewardEffect();
+    updateGameScreen();
+    startAwakeningTimerDisplay();
+    saveGameData();
+
+    if (awakeningTimeoutId !== null) {
+        window.clearTimeout(awakeningTimeoutId);
+    }
+
+    awakeningTimeoutId = window.setTimeout(() => {
+        endAwakeningMode();
+    }, awakeningDurationMs);
+}
+
 // 画面全体の表示をまとめて更新します。
 function updateGameScreen() {
     updateStatusBar();
+    updateAwakeningPanel();
     updateBadgeList();
     updateKanjiColor();
     updateKanjiEffect();
@@ -286,6 +417,17 @@ function stopAutoRotate() {
 
     window.clearInterval(autoRotateIntervalId);
     autoRotateIntervalId = null;
+}
+
+// 覚醒が解放済みなら、回転時に一定確率で自動発動します。
+function tryStartAwakeningMode() {
+    if (isAwakening || !isUnlocked(awakeningUnlockCount)) {
+        return;
+    }
+
+    if (Math.random() < awakeningChance) {
+        startAwakeningMode();
+    }
 }
 
 // 条件を満たした実績があるかを調べます。
@@ -322,16 +464,19 @@ function checkNewBadges() {
 // 1回回すときの共通処理です。
 function rotateKanji(options = {}) {
     const { playEffect = true } = options;
+    const previousCount = rotationCount;
     const previousLevel = getLevel();
+    const spinAmount = isAwakening ? 2 : 1;
 
     angle += 360;
-    rotationCount += 1;
+    rotationCount += spinAmount;
     kanji.style.transform = `rotate(${angle}deg)`;
-    const unlockedStep = getJustUnlockedStep();
+    tryStartAwakeningMode();
+    const unlockedStep = getJustUnlockedStep(previousCount, rotationCount);
     const currentLevel = getLevel();
     const levelUpHappened = currentLevel > previousLevel;
 
-    if (playEffect) {
+    if (playEffect || isAwakening) {
         playClickAnimation(Boolean(unlockedStep) || levelUpHappened);
     }
 
@@ -381,18 +526,32 @@ autoRotateButton.addEventListener("click", () => {
 
 // データリセットは保存データも削除して最初から遊び直します。
 resetDataButton.addEventListener("click", () => {
+    endAwakeningMode();
     angle = 0;
     rotationCount = 0;
     unlockedBadgeIds = [];
+    isAwakening = false;
+    awakeningEndsAt = 0;
     stopAutoRotate();
     kanji.style.transform = "rotate(0deg)";
     unlockToast.hidden = true;
     levelUpOverlay.hidden = true;
+    awakeningOverlay.hidden = true;
     effectLayer.innerHTML = "";
     localStorage.removeItem(saveDataKey);
     updateGameScreen();
 });
 
 loadGameData();
+
+if (isAwakening) {
+    const remainingTime = Math.max(0, awakeningEndsAt - Date.now());
+    startAwakeningTimerDisplay();
+    awakeningTimeoutId = window.setTimeout(() => {
+        endAwakeningMode();
+    }, remainingTime);
+}
+
 updateGameScreen();
 levelUpOverlay.hidden = true;
+awakeningOverlay.hidden = true;
