@@ -330,7 +330,7 @@ body {
 
 #spin-button,
 #auto-rotate-button,
-#reset-button {
+#reset-data-button {
     padding: 14px 18px;
     border: 0;
     border-radius: 14px;
@@ -348,9 +348,13 @@ body {
 }
 
 #auto-rotate-button,
-#reset-button {
+#reset-data-button {
     background: rgba(255, 255, 255, 0.1);
     color: #f5f7ff;
+}
+
+#reset-data-button {
+    background: rgba(255, 120, 120, 0.16);
 }
 
 #auto-rotate-button[aria-pressed="true"] {
@@ -365,7 +369,7 @@ body {
 
 #spin-button:hover,
 #auto-rotate-button:hover,
-#reset-button:hover {
+#reset-data-button:hover {
     transform: translateY(-2px);
 }
 

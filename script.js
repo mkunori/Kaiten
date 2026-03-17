@@ -10,7 +10,7 @@ const unlockMessage = document.getElementById("unlock-message");
 const nextUnlock = document.getElementById("next-unlock");
 const spinButton = document.getElementById("spin-button");
 const autoRotateButton = document.getElementById("auto-rotate-button");
-const resetButton = document.getElementById("reset-button");
+const resetDataButton = document.getElementById("reset-data-button");
 const unlockToast = document.getElementById("unlock-toast");
 const levelUpOverlay = document.getElementById("level-up-overlay");
 const levelUpValue = document.getElementById("level-up-value");
@@ -32,6 +32,7 @@ const badgeSteps = [
 
 const kanjiColors = ["#f7fbff", "#ffd166", "#58d7ff", "#8ef6a4", "#ff8fab"];
 const levelThresholds = [10, 30, 50, 100];
+const saveDataKey = "kaiten-save-data";
 
 // 回転数や自動回転の状態を覚えるための変数です。
 let angle = 0;
@@ -95,6 +96,54 @@ function getProgressInfo() {
         total,
         percent: (current / total) * 100
     };
+}
+
+// 今のゲーム状態を保存しやすい形にまとめます。
+function createSaveData() {
+    return {
+        rotationCount,
+        level: getLevel(),
+        unlockedFeatures: unlockSteps
+            .filter((step) => isUnlocked(step.count))
+            .map((step) => step.name),
+        unlockedBadgeIds
+    };
+}
+
+// localStorageにゲーム状態を保存します。
+function saveGameData() {
+    try {
+        const saveData = createSaveData();
+        localStorage.setItem(saveDataKey, JSON.stringify(saveData));
+    } catch (error) {
+        console.warn("セーブに失敗しました", error);
+    }
+}
+
+// localStorageにあるゲーム状態を読み込みます。
+function loadGameData() {
+    try {
+        const savedText = localStorage.getItem(saveDataKey);
+
+        if (!savedText) {
+            return;
+        }
+
+        const savedData = JSON.parse(savedText);
+        const validBadgeIds = badgeSteps.map((badge) => badge.id);
+
+        rotationCount = typeof savedData.rotationCount === "number"
+            ? Math.max(0, savedData.rotationCount)
+            : 0;
+        angle = rotationCount * 360;
+        unlockedBadgeIds = Array.isArray(savedData.unlockedBadgeIds)
+            ? savedData.unlockedBadgeIds.filter((badgeId) => validBadgeIds.includes(badgeId))
+            : [];
+
+        kanji.style.transform = `rotate(${angle}deg)`;
+    } catch (error) {
+        console.warn("セーブデータの読み込みに失敗しました", error);
+    }
 }
 
 // 上部ステータスバーの内容を更新します。
@@ -371,6 +420,8 @@ function rotateKanji(options = {}) {
         showBadgeToast(`実績獲得: ${newBadges[0].name}`);
         playRewardEffect();
     }
+
+    saveGameData();
 }
 
 // 文字をクリックしても回せるようにします。
@@ -401,8 +452,8 @@ autoRotateButton.addEventListener("click", () => {
     updateAutoRotateButton();
 });
 
-// リセットでゲームの進行を最初からやり直します。
-resetButton.addEventListener("click", () => {
+// データリセットは保存データも削除して最初から遊び直します。
+resetDataButton.addEventListener("click", () => {
     angle = 0;
     rotationCount = 0;
     unlockedBadgeIds = [];
@@ -411,8 +462,10 @@ resetButton.addEventListener("click", () => {
     unlockToast.hidden = true;
     levelUpOverlay.hidden = true;
     effectLayer.innerHTML = "";
+    localStorage.removeItem(saveDataKey);
     updateGameScreen();
 });
 
+loadGameData();
 updateGameScreen();
 levelUpOverlay.hidden = true;
