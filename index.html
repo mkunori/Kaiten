@@ -13,7 +13,10 @@
     <aside id="counter-panel" aria-live="polite">
         <p class="counter-label">回転数</p>
         <p id="counter-value">0</p>
-        <button id="auto-rotate-button" type="button" aria-pressed="false">自動回転: オフ</button>
+        <div id="unlock-list" aria-label="解放機能一覧"></div>
+        <p id="unlock-message">10回で「色変更」が解放されます。</p>
+        <p id="next-unlock">次の解放まで あと10回</p>
+        <button id="auto-rotate-button" type="button" aria-pressed="false" hidden>自動回転: オフ</button>
         <button id="reset-button" type="button">0に戻す</button>
     </aside>
 

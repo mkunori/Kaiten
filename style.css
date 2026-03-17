@@ -14,10 +14,16 @@ body {
 #kanji {
     /* 文字を大きく表示し、クリックできる見た目にします。 */
     font-size: clamp(88px, 18vw, 120px);
+    color: #222222;
     cursor: pointer;
     transition: transform 0.6s;
     user-select: none;
     -webkit-user-select: none;
+}
+
+#kanji.effect-unlocked {
+    text-shadow: 0 0 12px rgba(244, 162, 97, 0.75);
+    filter: drop-shadow(0 0 16px rgba(29, 53, 87, 0.35));
 }
 
 #counter-panel {
@@ -48,6 +54,42 @@ body {
     font-size: 40px;
     font-weight: 700;
     line-height: 1;
+}
+
+#unlock-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.unlock-item {
+    padding: 6px 10px;
+    border: 1px solid #222;
+    border-radius: 999px;
+    font-size: 13px;
+}
+
+.unlock-item.locked {
+    background: #f3f3f3;
+    color: #666666;
+}
+
+.unlock-item.unlocked {
+    background: #222222;
+    color: #ffffff;
+}
+
+#unlock-message,
+#next-unlock {
+    margin: 12px 0 0;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+#unlock-message {
+    font-weight: 700;
 }
 
 #reset-button {
@@ -115,6 +157,15 @@ body {
         font-size: 36px;
     }
 
+    #unlock-message,
+    #next-unlock {
+        font-size: 13px;
+    }
+
+    .unlock-item {
+        font-size: 12px;
+    }
+
     #reset-button {
         width: 100%;
         padding: 10px 14px;
@@ -149,5 +200,14 @@ body {
 
     #counter-value {
         font-size: 32px;
+    }
+
+    #unlock-message,
+    #next-unlock {
+        font-size: 12px;
+    }
+
+    .unlock-item {
+        font-size: 11px;
     }
 }
