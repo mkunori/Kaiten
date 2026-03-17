@@ -322,13 +322,12 @@ body {
 
 #control-bar {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     padding: 14px;
     margin-bottom: env(safe-area-inset-bottom);
 }
 
-#spin-button,
 #auto-rotate-button,
 #reset-data-button {
     padding: 14px 18px;
@@ -340,11 +339,6 @@ body {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     transition: transform 0.18s ease, opacity 0.18s ease, background 0.18s ease;
-}
-
-#spin-button {
-    background: linear-gradient(180deg, #ffd166 0%, #ffb703 100%);
-    color: #1c1604;
 }
 
 #auto-rotate-button,
@@ -367,7 +361,6 @@ body {
     cursor: not-allowed;
 }
 
-#spin-button:hover,
 #auto-rotate-button:hover,
 #reset-data-button:hover {
     transform: translateY(-2px);

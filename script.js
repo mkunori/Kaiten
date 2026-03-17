@@ -8,7 +8,6 @@ const progressFill = document.getElementById("progress-fill");
 const badgeList = document.getElementById("badge-list");
 const unlockMessage = document.getElementById("unlock-message");
 const nextUnlock = document.getElementById("next-unlock");
-const spinButton = document.getElementById("spin-button");
 const autoRotateButton = document.getElementById("auto-rotate-button");
 const resetDataButton = document.getElementById("reset-data-button");
 const unlockToast = document.getElementById("unlock-toast");
@@ -427,11 +426,6 @@ function rotateKanji(options = {}) {
 // 文字をクリックしても回せるようにします。
 kanji.addEventListener("click", () => {
     rotateKanji({ playEffect: false });
-});
-
-// 下部の回すボタンでも同じ処理を使います。
-spinButton.addEventListener("click", () => {
-    rotateKanji({ playEffect: true });
 });
 
 // 自動回転のオン・オフを切り替えます。
